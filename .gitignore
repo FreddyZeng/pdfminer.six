@@ -2,6 +2,7 @@
 *.pyc
 *.pyo
 .svn
+.env
 _svn
 .pythoscope
 .ipynb_checkpoints
@@ -16,3 +17,18 @@ tests/*.xml
 tests/*.txt
 .idea/
 .tox/
+.nox/
+
+# python venv management tools
+Pipfile
+Pipfile.lock
+.noseids
+.vscode/
+poetry.lock
+.eggs
+.venv
+
+# Claude Code and Junie
+.claude/
+.junie/
+*~

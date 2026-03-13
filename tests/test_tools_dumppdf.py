@@ -1,53 +1,81 @@
-#!/usr/bin/env python
+import tempfile
+import unittest
 
-# -*- coding: utf-8 -*-
-import six
+import pytest
 
-import nose, logging, os
+from tests.helpers import absolute_sample_path
+from tests.tempfilepath import TemporaryFilePath
+from tools import dumppdf
 
-if six.PY3:
-    from tools import dumppdf
-elif six.PY2:
-    import os, sys
-    sys.path.append(os.path.abspath(os.path.curdir))
-    import tools.dumppdf as dumppdf
 
-path=os.path.dirname(os.path.abspath(__file__))+'/'
+def run(filename, options=None):
+    absolute_path = absolute_sample_path(filename)
+    with TemporaryFilePath() as output_file_name:
+        if options:
+            s = f"dumppdf -o {output_file_name} {options} {absolute_path}"
+        else:
+            s = f"dumppdf -o {output_file_name} {absolute_path}"
 
-def run(datapath,filename,options=None):
-    i=path+datapath+filename+'.pdf'
-    o=path+filename+'.xml'
-    if options:
-        s='dumppdf -o%s %s %s'%(o,options,i)
-    else:
-         s='dumppdf -o%s %s'%(o,i)
-    dumppdf.main(s.split(' '))
+        dumppdf.main(s.split(" ")[1:])
 
-class TestDumpPDF():
-    
 
-    def test_1(self):
-        run('../samples/','jo','-t -a')
-        run('../samples/','simple1','-t -a')
-        run('../samples/','simple2','-t -a')
-        run('../samples/','simple3','-t -a')
-        
+class TestDumpPDF(unittest.TestCase):
+    def test_simple1(self):
+        run("simple1.pdf", "-t -a")
+
+    def test_simple2(self):
+        run("simple2.pdf", "-t -a")
+
+    def test_jo(self):
+        run("jo.pdf", "-t -a")
+
+    def test_simple3(self):
+        run("simple3.pdf", "-t -a")
+
     def test_2(self):
-        run('../samples/nonfree/','dmca','-t -a')
-        
+        run("nonfree/dmca.pdf", "-t -a")
+
     def test_3(self):
-        run('../samples/nonfree/','f1040nr')
+        run("nonfree/f1040nr.pdf")
 
     def test_4(self):
-        run('../samples/nonfree/','i1040nr')
-        
-    def test_5(self):
-        run('../samples/nonfree/','kampo','-t -a')
-        
-    def test_6(self):
-        run('../samples/nonfree/','naacl06-shinyama','-t -a')
+        run("nonfree/i1040nr.pdf")
 
-if __name__ == '__main__':
-    #import logging,sys,os,six
-    #logging.basicConfig(level=logging.DEBUG, filename='%s_%d.%d.log'%(os.path.basename(__file__),sys.version_info[0],sys.version_info[1]))
-    nose.runmodule()
+    def test_5(self):
+        run("nonfree/kampo.pdf", "-t -a")
+
+    def test_6(self):
+        run("nonfree/naacl06-shinyama.pdf", "-t -a")
+
+    def test_simple1_raw(self):
+        """Known issue: crash in dumpxml writing binary to text stream."""
+        with pytest.raises(TypeError):
+            run("simple1.pdf", "-r -a")
+
+    def test_simple1_binary(self):
+        """Known issue: crash in dumpxml writing binary to text stream."""
+        with pytest.raises(TypeError):
+            run("simple1.pdf", "-b -a")
+
+    def test_encryption_aes128(self):
+        """Issue 1122: need to remove padding from AES-encrypted strings"""
+        self.assert_de_DE("encryption/aes-128.pdf")
+
+    def test_encryption_aes256(self):
+        """Issue 1122: need to remove padding from AES-encrypted strings"""
+        self.assert_de_DE("encryption/aes-256.pdf")
+
+    def assert_de_DE(self, path):
+        absolute_path = absolute_sample_path(path)
+        with tempfile.NamedTemporaryFile("w+") as outfh:
+            dumppdf.main(
+                ["--password", "foo", "--objects", "1", "-o", outfh.name, absolute_path]
+            )
+            outfh.flush()
+            outfh.seek(0, 0)
+            for spam in outfh:
+                if "de-DE" in spam:
+                    self.assertEqual(
+                        spam.strip(),
+                        """<value><string size="5">de-DE</string></value>""",
+                    )

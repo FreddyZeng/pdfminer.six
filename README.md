@@ -1,110 +1,80 @@
-PDFMiner.six
+pdfminer.six
 ============
 
-PDFMiner.six is a fork of PDFMiner using six for Python 2+3 compatibility
+[![Continuous integration](https://github.com/pdfminer/pdfminer.six/actions/workflows/actions.yml/badge.svg)](https://github.com/pdfminer/pdfminer.six/actions/workflows/actions.yml)
+[![PyPI version](https://img.shields.io/pypi/v/pdfminer.six.svg)](https://pypi.python.org/pypi/pdfminer.six/)
+[![gitter](https://badges.gitter.im/pdfminer-six/Lobby.svg)](https://gitter.im/pdfminer-six/Lobby?utm_source=badge&utm_medium)
 
-[![Build Status](https://travis-ci.org/pdfminer/pdfminer.six.svg?branch=master)](https://travis-ci.org/pdfminer/pdfminer.six) [![PyPI version](https://img.shields.io/pypi/v/pdfminer.six.svg)](https://pypi.python.org/pypi/pdfminer.six/)
+*We fathom PDF*
 
-PDFMiner is a tool for extracting information from PDF documents.
-Unlike other PDF-related tools, it focuses entirely on getting
-and analyzing text data. PDFMiner allows one to obtain
-the exact location of text in a page, as well as
-other information such as fonts or lines.
-It includes a PDF converter that can transform PDF files
-into other text formats (such as HTML). It has an extensible
-PDF parser that can be used for other purposes than text analysis.
+Pdfminer.six is a community maintained fork of the original PDFMiner. It is a tool for extracting information from PDF
+documents. It focuses on getting and analyzing text data. Pdfminer.six extracts the text from a page directly from the
+sourcecode of the PDF. It can also be used to get the exact location, font or color of the text.
 
- * Webpage: https://github.com/pdfminer/
- * Download (PyPI): https://pypi.python.org/pypi/pdfminer.six/
+It is built in a modular way such that each component of pdfminer.six can be replaced easily. You can implement your own
+interpreter or rendering device that uses the power of pdfminer.six for other purposes than text analysis.
+
+Check out the full documentation on
+[Read the Docs](https://pdfminersix.readthedocs.io).
 
 
 Features
 --------
 
- * Written entirely in Python.
- * Parse, analyze, and convert PDF documents.
- * PDF-1.7 specification support. (well, almost)
- * CJK languages and vertical writing scripts support.
- * Various font types (Type1, TrueType, Type3, and CID) support.
- * Basic encryption (RC4) support.
- * Outline (TOC) extraction.
- * Tagged contents extraction.
- * Automatic layout analysis.
+* Written entirely in Python.
+* Parse, analyze, and convert PDF documents.
+* Extract content as text, images, html or [hOCR](https://en.wikipedia.org/wiki/HOCR).
+* Support for PDF-1.7 specification (well, almost).
+* Support for CJK languages and vertical writing.
+* Support for various font types (Type1, TrueType, Type3, and CID) support.
+* Support for extracting embedded images (JPG, PNG, TIFF, JBIG2, bitmaps).
+* Support for decoding various compressions (ASCIIHexDecode, ASCII85Decode, LZWDecode, FlateDecode, RunLengthDecode,
+  CCITTFaxDecode)
+* Support for RC4 and AES encryption.
+* Support for AcroForm interactive form extraction.
+* Table of contents extraction.
+* Tagged contents extraction.
+* Automatic layout analysis.
 
+How to use
+----------
 
-How to Install
---------------
+* Install Python 3.10 or newer.
+* Install pdfminer.six.
+  ```bash
+  pip install pdfminer.six
 
- * Install Python 2.7 or newer. (Python 3.x is supported in pdfminer.six)
- * Install
+* (Optionally) install extra dependencies for extracting images.
 
-    `pip install pdfminer.six`
+  ```bash
+  pip install 'pdfminer.six[image]'
 
- * Run the following test:
+* Use the command-line interface to extract text from pdf.
 
-    `pdf2txt.py samples/simple1.pdf`
+  ```bash
+  pdf2txt.py example.pdf
 
+* Or use it with Python.
+  ```python
+  from pdfminer.high_level import extract_text
 
-Command Line Tools
-------------------
+  text = extract_text("example.pdf")
+  print(text)
+  ```
 
-PDFMiner comes with two handy tools:
-pdf2txt.py and dumppdf.py.
+Contributing
+------------
 
-**pdf2txt.py**
+We welcome contributions! Whether you want to fix a bug, add a feature, or improve documentation, your help is appreciated.
 
-pdf2txt.py extracts text contents from a PDF file.
-It extracts all the text that are to be rendered programmatically,
-i.e. text represented as ASCII or Unicode strings.
-It cannot recognize text drawn as images that would require optical character recognition.
-It also extracts the corresponding locations, font names, font sizes, writing
-direction (horizontal or vertical) for each text portion.
-You need to provide a password for protected PDF documents when its access is restricted.
-You cannot extract any text from a PDF document which does not have extraction permission.
+Please note that as a community-maintained project with limited maintainer availability, the best way to get an issue resolved is to submit a pull request yourself.
 
-(For details, refer to /docs/index.html.)
+To get started:
+1. Read [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions and coding standards
+2. Check out the [open issues](https://github.com/pdfminer/pdfminer.six/issues) to find something to work on
+3. Join the discussion on [Gitter](https://gitter.im/pdfminer-six/Lobby) if you have questions
 
-**dumppdf.py**
+Acknowledgement
+---------------
 
-dumppdf.py dumps the internal contents of a PDF file in pseudo-XML format.
-This program is primarily for debugging purposes,
-but it's also possible to extract some meaningful contents (e.g. images).
-
-(For details, refer to /docs/index.html.)
-
-
-TODO
-----
-
- * PEP-8 and PEP-257 conformance.
- * Better documentation.
- * Performance improvements.
-
-
-Terms and Conditions
---------------------
-
-(This is so-called MIT/X License)
-
-Copyright (c) 2004-2014  Yusuke Shinyama <yusuke at cs dot nyu dot edu>
-
-Permission is hereby granted, free of charge, to any person
-obtaining a copy of this software and associated documentation
-files (the "Software"), to deal in the Software without
-restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, sublicense, and/or
-sell copies of the Software, and to permit persons to whom the
-Software is furnished to do so, subject to the following
-conditions:
-
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
-KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
-SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+This repository includes code from `pyHanko` ; the original license has been included [here](/docs/licenses/LICENSE.pyHanko).

@@ -1,17 +1,17 @@
 This directory contains sample PDF files.
 
 These files (including ones in nonfree/ subdirectory) can be
-distributed freely but does not come with explicit licensing 
+distributed freely but does not come with explicit licensing
 terms or source files.
 
 Here are the credits of the original files:
 
 simple1.pdf:
-  (Originally taken from PDF Specification 1.7, 
+  (Originally taken from PDF Specification 1.7,
   Appendix G. "Simple Text String Example" and modified)
 
 simple2.pdf:
-  (Originally taken from PDF Specification 1.7, 
+  (Originally taken from PDF Specification 1.7,
   Appendix G. "Simple Graphics Example" and modified)
 
 jo.pdf:
@@ -20,7 +20,18 @@ jo.pdf:
   (File generated from jo.tex by LaTeX and dvi2pdfm)
 
 --
-nonfree/dmca.pdf: 
+contrib/matplotlib.pdf
+  Copyright 2018, James R Barlow
+  Example file created in matplotlib to add a Type3 font to the samples
+  Released under the terms of the "LICENSE" file
+
+--
+nonfree/cmp_itext_logo.pdf
+  Bruno Lowagie
+  "iText Logo - Type 3 font"
+  http://gitlab.itextsupport.com/itext/sandbox/raw/master/cmpfiles/fonts/cmp_itext_logo.pdf
+
+nonfree/dmca.pdf:
   U.S. Copyright Office
   The Digital Millenium Copyright Act
   http://www.copyright.gov/legislation/dmca.pdf

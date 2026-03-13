@@ -1,4 +1,3 @@
-
 #
 # RunLength decoder (Adobe version) implementation based on PDF Reference
 # version 1.4 section 3.3.4.
@@ -6,11 +5,9 @@
 #  * public domain *
 #
 
-import six #Python 2+3 compatibility
 
-def rldecode(data):
-    """
-    RunLength decoder (Adobe version) implementation based on PDF Reference
+def rldecode(data: bytes) -> bytes:
+    """RunLength decoder (Adobe version) implementation based on PDF Reference
     version 1.4 section 3.3.4:
         The RunLengthDecode filter decodes data that has been encoded in a
         simple byte-oriented format based on run length. The encoded data
@@ -22,23 +19,18 @@ def rldecode(data):
         (2 to 128) times during decompression. A length value of 128
         denotes EOD.
     """
-    decoded = b''
-    i = 0
-    while i < len(data):
-        #print 'data[%d]=:%d:' % (i,ord(data[i]))
-        length = six.indexbytes(data,i)
+    decoded_array: list[int] = []
+    data_iter = iter(data)
+
+    while True:
+        length = next(data_iter, 128)
         if length == 128:
             break
-        if length >= 0 and length < 128:
-            for j in range(i+1,(i+1)+(length+1)):
-                decoded+=six.int2byte(six.indexbytes(data,j))
-            #print 'length=%d, run=%s' % (length+1,run)
-            
-            i = (i+1) + (length+1)
-        if length > 128:
-            run = six.int2byte(six.indexbytes(data,i+1))*(257-length)
-            #print 'length=%d, run=%s' % (257-length,run)
-            decoded+=run
-            i = (i+1) + 1
-    return decoded
 
+        if 0 <= length < 128:
+            decoded_array.extend(next(data_iter) for _ in range(length + 1))
+
+        if length > 128:
+            run = [next(data_iter)] * (257 - length)
+            decoded_array.extend(run)
+    return bytes(decoded_array)

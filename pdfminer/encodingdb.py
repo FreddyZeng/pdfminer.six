@@ -1,35 +1,93 @@
-
+import logging
 import re
-from .psparser import PSLiteral
-from .glyphlist import glyphname2unicode
-from .latin_enc import ENCODING
+from collections.abc import Iterable
+from typing import ClassVar, cast
 
-import six # Python 2+3 compatibility
+from pdfminer.glyphlist import glyphname2unicode
+from pdfminer.latin_enc import ENCODING
+from pdfminer.pdfexceptions import PDFKeyError
+from pdfminer.psparser import PSLiteral
 
-STRIP_NAME = re.compile(r'[0-9]+')
+HEXADECIMAL = re.compile(r"[0-9a-fA-F]+")
+
+log = logging.getLogger(__name__)
 
 
-##  name2unicode
-##
-def name2unicode(name):
-    """Converts Adobe glyph names to Unicode numbers."""
-    if name in glyphname2unicode:
+def name2unicode(name: str) -> str:
+    """Converts Adobe glyph names to Unicode numbers.
+
+    In contrast to the specification, this raises a KeyError instead of return
+    an empty string when the key is unknown.
+    This way the caller must explicitly define what to do
+    when there is not a match.
+
+    Reference:
+    https://github.com/adobe-type-tools/agl-specification#2-the-mapping
+
+    :returns unicode character if name resembles something,
+    otherwise a KeyError
+    """
+    if not isinstance(name, str):
+        raise PDFKeyError(
+            f'Could not convert unicode name "{name}" to character because '
+            f"it should be of type str but is of type {type(name)}",
+        )
+
+    name = name.split(".")[0]
+    components = name.split("_")
+
+    if len(components) > 1:
+        return "".join(map(name2unicode, components))
+
+    elif name in glyphname2unicode:
         return glyphname2unicode[name]
-    m = STRIP_NAME.search(name)
-    if not m:
-        raise KeyError(name)
-    return six.unichr(int(m.group(0)))
+
+    elif name.startswith("uni"):
+        name_without_uni = name.strip("uni")
+
+        if HEXADECIMAL.match(name_without_uni) and len(name_without_uni) % 4 == 0:
+            unicode_digits = [
+                int(name_without_uni[i : i + 4], base=16)
+                for i in range(0, len(name_without_uni), 4)
+            ]
+            for digit in unicode_digits:
+                raise_key_error_for_invalid_unicode(digit)
+            characters = map(chr, unicode_digits)
+            return "".join(characters)
+
+    elif name.startswith("u"):
+        name_without_u = name.strip("u")
+
+        if HEXADECIMAL.match(name_without_u) and 4 <= len(name_without_u) <= 6:
+            unicode_digit = int(name_without_u, base=16)
+            raise_key_error_for_invalid_unicode(unicode_digit)
+            return chr(unicode_digit)
+
+    raise PDFKeyError(
+        f'Could not convert unicode name "{name}" to character because '
+        "it does not match specification",
+    )
 
 
-##  EncodingDB
-##
-class EncodingDB(object):
+def raise_key_error_for_invalid_unicode(unicode_digit: int) -> None:
+    """Unicode values should not be in the range D800 through DFFF because
+    that is used for surrogate pairs in UTF-16
 
-    std2unicode = {}
-    mac2unicode = {}
-    win2unicode = {}
-    pdf2unicode = {}
-    for (name, std, mac, win, pdf) in ENCODING:
+    :raises KeyError if unicode digit is invalid
+    """
+    if 55295 < unicode_digit < 57344:
+        raise PDFKeyError(
+            f"Unicode digit {unicode_digit} is invalid because "
+            "it is in the range D800 through DFFF",
+        )
+
+
+class EncodingDB:
+    std2unicode: ClassVar[dict[int, str]] = {}
+    mac2unicode: ClassVar[dict[int, str]] = {}
+    win2unicode: ClassVar[dict[int, str]] = {}
+    pdf2unicode: ClassVar[dict[int, str]] = {}
+    for name, std, mac, win, pdf in ENCODING:
         c = name2unicode(name)
         if std:
             std2unicode[std] = c
@@ -40,16 +98,20 @@ class EncodingDB(object):
         if pdf:
             pdf2unicode[pdf] = c
 
-    encodings = {
-        'StandardEncoding': std2unicode,
-        'MacRomanEncoding': mac2unicode,
-        'WinAnsiEncoding': win2unicode,
-        'PDFDocEncoding': pdf2unicode,
+    encodings: ClassVar[dict[str, dict[int, str]]] = {
+        "StandardEncoding": std2unicode,
+        "MacRomanEncoding": mac2unicode,
+        "WinAnsiEncoding": win2unicode,
+        "PDFDocEncoding": pdf2unicode,
     }
 
     @classmethod
-    def get_encoding(klass, name, diff=None):
-        cid2unicode = klass.encodings.get(name, klass.std2unicode)
+    def get_encoding(
+        cls,
+        name: str,
+        diff: Iterable[object] | None = None,
+    ) -> dict[int, str]:
+        cid2unicode = cls.encodings.get(name, cls.std2unicode)
         if diff:
             cid2unicode = cid2unicode.copy()
             cid = 0
@@ -58,8 +120,8 @@ class EncodingDB(object):
                     cid = x
                 elif isinstance(x, PSLiteral):
                     try:
-                        cid2unicode[cid] = name2unicode(x.name)
-                    except KeyError:
-                        pass
+                        cid2unicode[cid] = name2unicode(cast(str, x.name))
+                    except (KeyError, ValueError) as e:
+                        log.debug(str(e))
                     cid += 1
         return cid2unicode

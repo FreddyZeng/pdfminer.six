@@ -1,84 +1,84 @@
-
-from io import BytesIO
-
-import six  #Python 2+3 compatibility
-
 import logging
+from collections.abc import Iterator
+from io import BytesIO
+from typing import BinaryIO, cast
 
-class CorruptDataError(Exception):
+from pdfminer.pdfexceptions import PDFEOFError, PDFException
+
+logger = logging.getLogger(__name__)
+
+
+class CorruptDataError(PDFException):
     pass
 
 
-##  LZWDecoder
-##
-class LZWDecoder(object):
-
-    def __init__(self, fp):
+class LZWDecoder:
+    def __init__(self, fp: BinaryIO) -> None:
         self.fp = fp
         self.buff = 0
         self.bpos = 8
         self.nbits = 9
-        self.table = None
-        self.prevbuf = None
-        return
+        # NB: self.table stores None only in indices 256 and 257
+        self.table: list[bytes | None] = []
+        self.prevbuf: bytes | None = None
 
-    def readbits(self, bits):
+    def readbits(self, bits: int) -> int:
         v = 0
         while 1:
             # the number of remaining bits we can get from the current buffer.
-            r = 8-self.bpos
+            r = 8 - self.bpos
             if bits <= r:
                 # |-----8-bits-----|
                 # |-bpos-|-bits-|  |
                 # |      |----r----|
-                v = (v << bits) | ((self.buff >> (r-bits)) & ((1 << bits)-1))
+                v = (v << bits) | ((self.buff >> (r - bits)) & ((1 << bits) - 1))
                 self.bpos += bits
                 break
             else:
                 # |-----8-bits-----|
                 # |-bpos-|---bits----...
                 # |      |----r----|
-                v = (v << r) | (self.buff & ((1 << r)-1))
+                v = (v << r) | (self.buff & ((1 << r) - 1))
                 bits -= r
                 x = self.fp.read(1)
                 if not x:
-                    raise EOFError
+                    raise PDFEOFError
                 self.buff = ord(x)
                 self.bpos = 0
         return v
 
-    def feed(self, code):
-        x = b''
+    def feed(self, code: int) -> bytes:
+        x = b""
         if code == 256:
-            self.table = [six.int2byte(c) for c in range(256)]  # 0-255
+            self.table = [bytes((c,)) for c in range(256)]  # 0-255
             self.table.append(None)  # 256
             self.table.append(None)  # 257
-            self.prevbuf = b''
+            self.prevbuf = b""
             self.nbits = 9
         elif code == 257:
             pass
         elif not self.prevbuf:
-            x = self.prevbuf = self.table[code]
+            x = self.prevbuf = cast(bytes, self.table[code])  # assume not None
         else:
             if code < len(self.table):
-                x = self.table[code]
-                self.table.append(self.prevbuf+x[:1])
+                x = cast(bytes, self.table[code])  # assume not None
+                self.table.append(self.prevbuf + x[:1])
             elif code == len(self.table):
-                self.table.append(self.prevbuf+self.prevbuf[:1])
-                x = self.table[code]
+                self.table.append(self.prevbuf + self.prevbuf[:1])
+                x = cast(bytes, self.table[code])
             else:
                 raise CorruptDataError
-            l = len(self.table)
-            if l == 511:
+            table_length = len(self.table)
+            if table_length == 511:
                 self.nbits = 10
-            elif l == 1023:
+            elif table_length == 1023:
                 self.nbits = 11
-            elif l == 2047:
+            elif table_length == 2047:
                 self.nbits = 12
             self.prevbuf = x
         return x
 
-    def run(self):
+    def run(self) -> Iterator[bytes]:
         while 1:
             try:
                 code = self.readbits(self.nbits)
@@ -90,13 +90,17 @@ class LZWDecoder(object):
                 # just ignore corrupt data and stop yielding there
                 break
             yield x
-            logging.debug('nbits=%d, code=%d, output=%r, table=%r' %
-                          (self.nbits, code, x, self.table[258:]))
-        return
+
+            logger.debug(
+                "nbits=%d, code=%d, output=%r, table=%r",
+                self.nbits,
+                code,
+                x,
+                self.table[258:],
+            )
 
 
-# lzwdecode
-def lzwdecode(data):
+def lzwdecode(data: bytes) -> bytes:
     fp = BytesIO(data)
-    s=LZWDecoder(fp).run()
-    return b''.join(s)
+    s = LZWDecoder(fp).run()
+    return b"".join(s)
